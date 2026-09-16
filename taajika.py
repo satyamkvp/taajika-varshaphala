@@ -47,7 +47,7 @@ DEBILITATION_DEGREES = {
 # Format per sign: list of tuples -> (upper_limit_degree, ruling_planet)
 # -----------------------------------------------------------------------------
 HADDA_TABLE = {
-    0:  [(6, "Jupiter"), (12, "Venus"), (18, "Mercury"), (23, "Mars"), (30, "Saturn")],     # Aries
+    0:  [(6, "Jupiter"), (12, "Venus"), (20, "Mercury"), (25, "Mars"), (30, "Saturn")],    # Aries
     1:  [(8, "Venus"), (14, "Mercury"), (22, "Jupiter"), (27, "Saturn"), (30, "Mars")],    # Taurus
     2:  [(6, "Mercury"), (12, "Venus"), (17, "Jupiter"), (24, "Mars"), (30, "Saturn")],    # Gemini
     3:  [(7, "Mars"), (13, "Venus"), (19, "Mercury"), (26, "Jupiter"), (30, "Saturn")],    # Cancer
@@ -338,6 +338,9 @@ def determine_varsheshwara(natal_pos, varsha_pos, pv_balas, vp_dt_utc, local_tz_
     muntha_sign = (j_asc_sign + (target_year - natal_year)) % 12
     muntha_lord = RASHI_LORDS[muntha_sign]
 
+    # House occupied by Muntha in Varshaphala Chart (1-indexed)
+    muntha_house = ((muntha_sign - v_asc_sign) % 12) + 1
+    
     dina_ratri_lord = "Sun" if is_day else "Moon"
 
     candidates = {
@@ -357,7 +360,242 @@ def determine_varsheshwara(natal_pos, varsha_pos, pv_balas, vp_dt_utc, local_tz_
             max_bala = bala
             best_lord = planet
 
-    return candidates, best_lord, max_bala
+    muntha_info = {
+        "sign_name": RASHI_NAMES[muntha_sign],
+        "sign_num": muntha_sign + 1,
+        "house": muntha_house,
+        "lord": muntha_lord
+    }
+
+    return candidates, best_lord, max_bala, muntha_info
+
+def get_chart_positions(jd, lat, lon):
+    """Calculates positions of Ascendant, 7 Classical Planets, plus Rahu and Ketu."""
+    positions = {}
+    for p_name, p_id in PLANETS.items():
+        positions[p_name] = get_planet_sidereal_lon(jd, p_id)
+
+    # Add Rahu (Mean Node) and Ketu (180 degrees opposite)
+    rahu_lon = get_planet_sidereal_lon(jd, swe.MEAN_NODE)
+    positions["Rahu"] = rahu_lon
+    positions["Ketu"] = (rahu_lon + 180.0) % 360.0
+
+    # Ascendant Calculation
+    cusps, ascmc = swe.houses_ex(jd, lat, lon, b'P', swe.FLG_SIDEREAL)
+    positions["Ascendant"] = ascmc[0] % 360.0
+    return positions
+
+def calculate_all_tripataka_positions(natal_positions, target_year):
+    """
+    Calculates Tripataka Chakra progressed positions for all planets:
+    - Figure = Completed Years + 1
+    - Moon: Divisor 9, counted forward from Natal Moon sign
+    - Sun, Mercury, Jupiter, Venus, Saturn: Divisor 4, counted forward from respective Natal sign
+    - Mars: Divisor 6, counted forward from Natal Mars sign
+    """
+    birth_year = natal_positions.get("birth_year", target_year)
+    completed_years = target_year - birth_year
+    figure = completed_years
+
+    tripataka_results = {}
+
+    # 1. Moon (Divisor 9)
+    rem_moon = figure % 9
+    if rem_moon == 0:
+        rem_moon = 9
+    nat_moon_sign = int(natal_positions["Moon"] // 30)
+    tripataka_results["Moon"] = (nat_moon_sign + (rem_moon - 1)) % 12
+
+    # 2. Sun, Mercury, Jupiter, Venus, Saturn (Divisor 4)
+    group_4_planets = ["Sun", "Mercury", "Jupiter", "Venus", "Saturn"]
+    rem_4 = figure % 4
+    if rem_4 == 0:
+        rem_4 = 4
+
+    for p in group_4_planets:
+        if p in natal_positions:
+            nat_sign = int(natal_positions[p] // 30)
+            tripataka_results[p] = (nat_sign + (rem_4 - 1)) % 12
+
+    # 3. Mars, Rahu, Ketu (Divisor 6)
+    rem_6 = figure % 6
+    if rem_6 == 0: rem_6 = 6
+    for p in ["Mars", "Rahu", "Ketu"]:
+        if p in natal_positions:
+            nat_sign = int(natal_positions[p] // 30)
+            tripataka_results[p] = (nat_sign + (rem_6 - 1)) % 12
+
+    return figure, tripataka_results
+
+
+def display_full_tripataka_chakra(natal_positions, target_year):
+    """Displays Tripataka Chakra table including Mars, Rahu, and Ketu."""
+    figure, tp_positions = calculate_all_tripataka_positions(natal_positions, target_year)
+    completed_years = target_year - natal_positions.get("birth_year", target_year)
+
+    print("\n" + "=" * 80)
+    print(f"{'TRIPATAKA CHAKRA - ALL PLANETS (WITH MARS, RAHU, KETU)':^80}")
+    print("=" * 80)
+    print(f"Completed Years: {completed_years} | Calculation Figure (Age + 1): {figure}\n")
+    print(f"{'Planet':<10} | {'Divisor':<8} | {'Remainder':<10} | {'Natal Sign':<15} | {'Tripataka Sign':<15}")
+    print("-" * 80)
+
+    # Moon
+    rem_m = figure % 9
+    if rem_m == 0: rem_m = 9
+    print(f"{'Moon':<10} | {'9':<8} | {rem_m:<10} | {RASHI_NAMES[int(natal_positions['Moon']//30)]:<15} | {RASHI_NAMES[tp_positions['Moon']]:<15}")
+
+    # Group 4
+    rem_4 = figure % 4
+    if rem_4 == 0: rem_4 = 4
+    for p in ["Sun", "Mercury", "Jupiter", "Venus", "Saturn"]:
+        print(f"{p:<10} | {'4':<8} | {rem_4:<10} | {RASHI_NAMES[int(natal_positions[p]//30)]:<15} | {RASHI_NAMES[tp_positions[p]]:<15}")
+
+    # Group 6 (Mars, Rahu, Ketu)
+    rem_6 = figure % 6
+    if rem_6 == 0: rem_6 = 6
+    for p in ["Mars", "Rahu", "Ketu"]:
+        print(f"{p:<10} | {'6':<8} | {rem_6:<10} | {RASHI_NAMES[int(natal_positions[p]//30)]:<15} | {RASHI_NAMES[tp_positions[p]]:<15}")
+
+    print("-" * 80)
+
+def is_between_zodiacally(point, start, end):
+    """Checks if 'point' lies zodiacally between 'start' and 'end' (moving forward 0-360°)."""
+    dist_total = (end - start) % 360.0
+    dist_point = (point - start) % 360.0
+    return dist_point <= dist_total
+
+
+def calculate_all_50_sahams(positions, is_day):
+    """
+    Computes all 50 classical Tajika Sahams without wrapping raw longitudes,
+    keeping absolute cumulative degree totals for sign formatting.
+    """
+    asc = positions["Ascendant"]
+    sun = positions["Sun"]
+    moon = positions["Moon"]
+    mars = positions["Mars"]
+    mercury = positions["Mercury"]
+    jupiter = positions["Jupiter"]
+    venus = positions["Venus"]
+    saturn = positions["Saturn"]
+    
+    houses = positions.get("cusps", [asc + i*30 for i in range(12)])
+    h2 = houses[1] if len(houses) > 1 else (asc + 30)
+    h8 = houses[7] if len(houses) > 7 else (asc + 210)
+    h9 = houses[8] if len(houses) > 8 else (asc + 240)
+
+    sahams_registry = {
+        "Punya (Fortune/Virtue)":           (moon, sun, False),
+        "Vidya (Education/Learning)":       (sun, moon, False),
+        "Yasas (Fame/Renown)":              (jupiter, sun, False),
+        "Mitra (Friends)":                  (venus, moon, False),
+        "Mahatmya (Greatness)":             (mars, moon, False),
+        "Asha (Desires/Hope)":              (saturn, mars, False),
+        "Samartha (Enterprise/Ability)":    (mars, saturn, False),
+        "Bhratri (Brothers/Co-borns)":      (jupiter, saturn, True),
+        "Gaurava (Respect/Regard)":         (jupiter, moon, False),
+        "Pitri (Father)":                   (saturn, sun, False),
+        "Rajya (Kingdom/Authority/Career)": (saturn, sun, False),
+        "Matri (Mother)":                   (moon, venus, False),
+        "Putra (Children/Progeny)":         (jupiter, moon, False),
+        "Jeeva (Life/Longevity)":           (saturn, jupiter, False),
+        "Karma (Action/Work)":              (mars, mercury, False),
+        "Roga (Disease/Sickness)":          (saturn, moon, True),
+        "Kali (Misfortune)":                (jupiter, mars, False),
+        "Sastra (Sciences)":                (jupiter, saturn, False),
+        "Bandhu (Relatives)":               (mercury, moon, False),
+        "Mrityu (Death)":                   (h8, moon, True),
+        "Paradesa (Foreign Travel)":        (h9, mercury, True),
+        "Artha (Wealth/Money)":             (h2, saturn, True),
+        "Paradara (Adultery/Scandal)":      (venus, sun, False),
+        "Bandhana (Imprisonment)":          (saturn, mars, False),
+        "Vivaha (Marriage)":                (venus, saturn, False),
+        "Santapa (Grief/Sorrow)":           (saturn, moon, False),
+        "Sanchita (Accumulation)":          (jupiter, sun, False),
+        "Jalapatha (Water Travel)":         (moon, saturn, False),
+        "Yuddha (War/Conflict)":            (mars, sun, False),
+        "Shatru (Enemies)":                 (mars, saturn, False),
+        "Vitta (Financial Prosperity)":     (jupiter, sun, False),
+        "Vijaya (Victory)":                 (saturn, mars, False),
+        "Bhagya (Fortune/Luck)":            (sun, jupiter, False),
+        "Karya Siddhi (Success in Tasks)":  (mars, sun, False),
+        "Vyapara (Business/Trade)":         (mercury, saturn, False),
+        "Moha (Delusion/Attachment)":       (venus, moon, False),
+        "Durga (Protection/Safety)":        (mars, sun, False),
+        "Arogya (Health/Wellbeing)":        (moon, mars, False),
+        "Tapas (Spiritual Practice)":       (jupiter, sun, False),
+        "Preeti (Love/Affection)":          (venus, jupiter, False),
+        "Sukha (Happiness/Comforts)":       (moon, mercury, False),
+        "Duhkha (Misery/Pain)":             (saturn, mars, False),
+        "Bhaya (Fear/Danger)":              (mars, saturn, False),
+        "Shoka (Lamentation)":              (saturn, sun, False),
+        "Labha (Gains)":                    (jupiter, mercury, False),
+        "Vyaya (Expenditure)":              (saturn, jupiter, False),
+        "Asuya (Jealousy)":                 (mars, venus, False),
+        "Mada (Intoxication/Arrogance)":    (venus, mars, False),
+        "Chinta (Anxiety/Worry)":           (mercury, saturn, False),
+        "Siddhi (Accomplishment)":          (jupiter, mars, False)
+    }
+
+    computed_sahams = {}
+    
+    for name, (subtrahend, minuend, fixed) in sahams_registry.items():
+        if fixed:
+            p1, p2 = subtrahend, minuend
+        else:
+            p1, p2 = (subtrahend, minuend) if is_day else (minuend, subtrahend)
+
+        base_deg = p1 - p2 + asc
+
+        if p1 < asc < p2 or p2 < asc < p1:
+            base_deg += 0
+        else:
+            base_deg += 30.0
+
+            
+        computed_sahams[name] = {
+            "deg": base_deg,
+            "p1": p1,
+            "p2": p2
+        }
+
+    return computed_sahams
+
+
+def display_all_sahams_report(sahams_data, positions):
+    """
+    Formats and prints all 50 Sahams displaying both normal absolute degrees 
+    (0-360°) and Rashi sign/degree format.
+    """
+    asc = positions["Ascendant"]
+    
+    print("\n" + "=" * 135)
+    print(f"{'COMPLETE TAJIKA 50 SAHAMS REPORT (DEGREES & RASHI)':^135}")
+    print("=" * 135)
+    print(f"{'No.':<4} | {'Saham Name':<30} | {'P1 Position':<22} | {'P2 Position':<22} | {'Ascendant':<20} | {'Saham Position':<24}")
+    print("-" * 135)
+    
+    for idx, (name, item) in enumerate(sahams_data.items(), start=1):
+        deg = item["deg"]
+        p1 = item["p1"]
+        p2 = item["p2"]
+        
+        # Helper to format both absolute normal degrees and Rashi representation
+        def format_deg_and_rashi(val):
+            norm_val = val % 360.0
+            rashi_idx = int(norm_val // 30)
+            rem_deg = norm_val % 30
+            return f"{norm_val:6.2f}° ({RASHI_NAMES[rashi_idx]} {rem_deg:4.2f}°)"
+        
+        p1_str = format_deg_and_rashi(p1)
+        p2_str = format_deg_and_rashi(p2)
+        asc_str = format_deg_and_rashi(asc)
+        saham_str = format_deg_and_rashi(deg)
+        
+        print(f"{idx:<4} | {name:<30} | {p1_str:<22} | {p2_str:<22} | {asc_str:<20} | {saham_str:<24}")
+        
+    print("-" * 135)
 
 # -----------------------------------------------------------------------------
 # VISUAL DISPLAY FUNCTIONS
@@ -432,7 +670,7 @@ def main():
     # 5. Compute Balas, Tajika Relationships & Varsheshwara
     tajika_rel = calculate_tajika_relationships(varsha_positions)
     pv_balas = calculate_pancha_vargeeya_bala(varsha_positions, tajika_rel)
-    adhikaris, varsheshwara, v_bala = determine_varsheshwara(
+    adhikaris, varsheshwara, v_bala, muntha_info = determine_varsheshwara(
         natal_positions, varsha_positions, pv_balas, vp_dt_utc, tz_offset
     )
 
@@ -455,6 +693,14 @@ def main():
         natal_str = format_dms(natal_positions[body])
         varsha_str = format_dms(varsha_positions[body])
         print(f"{body:<12} | {natal_str:<30} | {varsha_str:<30}")
+    print("-" * 80)
+
+    # PRINT MUNTHA DETAILS
+    print(f"\n{'MUNTHA PLACEMENT':^80}")
+    print("-" * 80)
+    print(f"  Muntha Rashi : {muntha_info['sign_name']} (Sign {muntha_info['sign_num']})")
+    print(f"  Varsha House : House {muntha_info['house']} from Varsha Lagna")
+    print(f"  Muntha Lord  : {muntha_info['lord']}")
     print("-" * 80)
 
     # TAJIKA PLANETARY RELATIONSHIPS (DRISHTI BASED)
@@ -487,6 +733,17 @@ def main():
     print("-" * 80)
     print(f"\n>>> VARSHESHWARA (YEAR LORD): {varsheshwara.upper()} (Vishwa Bala: {v_bala:.2f}) <<<")
     print("=" * 80)
+
+    # PRINT TRIPATAKA CHAKRA
+    display_full_tripataka_chakra(natal_positions, target_year)
+
+    # Determine Day/Night status
+    local_vp_dt = vp_dt_utc + datetime.timedelta(hours=tz_offset)
+    is_day = 6 <= local_vp_dt.hour < 18
+
+    # Generate and print all 50 Sahams
+    all_sahams = calculate_all_50_sahams(varsha_positions, is_day)
+    display_all_sahams_report(all_sahams, varsha_positions)
 
 if __name__ == "__main__":
     main()
