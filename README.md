@@ -45,6 +45,9 @@ python3 taajika.py --name "Example Person" --year 1995 --month 5 --day 10 \
 	--longitude 77.2090 --target-year 2026
 ```
 
+Display the application version with `python3 taajika.py --version`. See
+[REVISION_HISTORY.md](REVISION_HISTORY.md) for release history.
+
 # Example
 Sample report for a person born on
 
@@ -58,7 +61,8 @@ Varshaphala for year : 2026
 ```sh
 python3 taajika.py --name abcd --year 2000 --month 9 --day 30 --hour 04 --minute 45 --timezone 5.5 --latitude 16.23 --longitude 80.09 --target-year 2026
 ================================================================================
-      TAJIKA VARSHAPHALA & PANCHA VARGEEYA BALA 
+           TAJIKA VARSHAPHALA & PANCHA VARGEEYA BALA 
+                         Version 1.0
 ================================================================================
 
 Varshaphala Report for : abcd
@@ -155,7 +159,7 @@ Saturn   | 22.50    | 3.63   | 7.50   | 7.50  | 3.75  | 44.88   | 11.22
 ================================================================================
              TRIPATAKA CHAKRA - ALL PLANETS (WITH MARS, RAHU, KETU)             
 ================================================================================
-Completed Years: 26 | Calculation Figure (Age + 1): 26
+Completed Years: 26 | Calculation Figure (Age): 26
 
 Planet     | Divisor  | Remainder  | Natal Sign      | Tripataka Sign 
 --------------------------------------------------------------------------------

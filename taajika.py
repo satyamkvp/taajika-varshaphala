@@ -4,6 +4,8 @@ import math
 import sys
 import swisseph as swe
 
+__version__ = "1.0"
+
 # Configure Swiss Ephemeris to use Lahiri Ayanamsa (Nirayana)
 swe.set_sid_mode(swe.SIDM_LAHIRI)
 
@@ -438,7 +440,7 @@ def display_full_tripataka_chakra(natal_positions, target_year):
     print("\n" + "=" * 80)
     print(f"{'TRIPATAKA CHAKRA - ALL PLANETS (WITH MARS, RAHU, KETU)':^80}")
     print("=" * 80)
-    print(f"Completed Years: {completed_years} | Calculation Figure (Age + 1): {figure}\n")
+    print(f"Completed Years: {completed_years} | Calculation Figure (Age): {figure}\n")
     print(f"{'Planet':<10} | {'Divisor':<8} | {'Remainder':<10} | {'Natal Sign':<15} | {'Tripataka Sign':<15}")
     print("-" * 80)
 
@@ -504,6 +506,7 @@ def display_chart_grid(title, positions):
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate a Tajika annual horoscope.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--name", help="Name to include in the report")
     parser.add_argument("--year", type=int, help="Birth year")
     parser.add_argument("--month", type=int, help="Birth month (1-12)")
@@ -518,6 +521,7 @@ def main():
 
     print("=" * 80)
     print("      TAJIKA VARSHAPHALA & PANCHA VARGEEYA BALA ")
+    print(f"                         Version {__version__}")
     print("=" * 80)
 
     if len(sys.argv) > 1:
