@@ -517,7 +517,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 80)
-    print("      TAJIKA VARSHAPHALA & PANCHA VARGEEYA BALA ENGINE")
+    print("      TAJIKA VARSHAPHALA & PANCHA VARGEEYA BALA ")
     print("=" * 80)
 
     if len(sys.argv) > 1:
@@ -537,8 +537,8 @@ def main():
         lat, lon = args.latitude, args.longitude
         target_year = args.target_year
     else:
-        name = None
         # 1. Interactive Inputs
+        name = input("Name (optional): ").strip() or None
         print("\n--- ENTER NATAL BIRTH DETAILS ---")
         year = int(input("Birth Year (e.g. 1995): "))
         month = int(input("Birth Month (1-12): "))
@@ -555,7 +555,7 @@ def main():
         target_year = int(input("Target Year for Annual Horoscope (e.g. 2026): "))
 
     if name:
-        print(f"\nName: {name}")
+        print(f"\nVarshaphala Report for : {name}")
 
     # 2. Convert Natal Local Time to UTC
     natal_local_dt = datetime.datetime(year, month, day, hour, minute)
@@ -609,12 +609,12 @@ def main():
 
     # TAJIKA PLANETARY RELATIONSHIPS (DRISHTI BASED)
     print(f"\n{'TAJIKA PLANETARY RELATIONSHIPS (BASED ON DRISHTI / ASPECTS)':^80}")
-    print("-" * 80)
-    print(f"{'Planet':<8} | {'Friends (3,5,9,11)':<22} | {'Enemies (1,4,7,10)':<22} | {'Neutral (2,6,8,12)':<20}")
-    print("-" * 80)
+    print("-" * 116)
+    print(f"{'Planet':<8} | {'Friends (3,5,9,11)':<36} | {'Enemies (1,4,7,10)':<36} | {'Neutral (2,6,8,12)':<36}")
+    print("-" * 116)
     for p_name, rel in tajika_rel.items():
-        print(f"{p_name:<8} | {rel['Friends']:<22} | {rel['Enemies']:<22} | {rel['Neutrals']:<20}")
-    print("-" * 80)
+        print(f"{p_name:<8} | {rel['Friends']:<36} | {rel['Enemies']:<36} | {rel['Neutrals']:<36}")
+    print("-" * 116)
 
     # ACCURATE PANCHA VARGEEYA BALA TABLE
     print(f"\n{'PANCHA VARGEEYA BALA (DYNAMIC BASED ON HADDA & TAJIKA DRISHTI)':^80}")
