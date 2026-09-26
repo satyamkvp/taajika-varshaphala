@@ -1,5 +1,7 @@
+import argparse
 import datetime
 import math
+import sys
 import swisseph as swe
 
 # Configure Swiss Ephemeris to use Lahiri Ayanamsa (Nirayana)
@@ -465,138 +467,6 @@ def is_between_zodiacally(point, start, end):
     dist_point = (point - start) % 360.0
     return dist_point <= dist_total
 
-
-def calculate_all_50_sahams(positions, is_day):
-    """
-    Computes all 50 classical Tajika Sahams without wrapping raw longitudes,
-    keeping absolute cumulative degree totals for sign formatting.
-    """
-    asc = positions["Ascendant"]
-    sun = positions["Sun"]
-    moon = positions["Moon"]
-    mars = positions["Mars"]
-    mercury = positions["Mercury"]
-    jupiter = positions["Jupiter"]
-    venus = positions["Venus"]
-    saturn = positions["Saturn"]
-    
-    houses = positions.get("cusps", [asc + i*30 for i in range(12)])
-    h2 = houses[1] if len(houses) > 1 else (asc + 30)
-    h8 = houses[7] if len(houses) > 7 else (asc + 210)
-    h9 = houses[8] if len(houses) > 8 else (asc + 240)
-
-    sahams_registry = {
-        "Punya (Fortune/Virtue)":           (moon, sun, False),
-        "Vidya (Education/Learning)":       (sun, moon, False),
-        "Yasas (Fame/Renown)":              (jupiter, sun, False),
-        "Mitra (Friends)":                  (venus, moon, False),
-        "Mahatmya (Greatness)":             (mars, moon, False),
-        "Asha (Desires/Hope)":              (saturn, mars, False),
-        "Samartha (Enterprise/Ability)":    (mars, saturn, False),
-        "Bhratri (Brothers/Co-borns)":      (jupiter, saturn, True),
-        "Gaurava (Respect/Regard)":         (jupiter, moon, False),
-        "Pitri (Father)":                   (saturn, sun, False),
-        "Rajya (Kingdom/Authority/Career)": (saturn, sun, False),
-        "Matri (Mother)":                   (moon, venus, False),
-        "Putra (Children/Progeny)":         (jupiter, moon, False),
-        "Jeeva (Life/Longevity)":           (saturn, jupiter, False),
-        "Karma (Action/Work)":              (mars, mercury, False),
-        "Roga (Disease/Sickness)":          (saturn, moon, True),
-        "Kali (Misfortune)":                (jupiter, mars, False),
-        "Sastra (Sciences)":                (jupiter, saturn, False),
-        "Bandhu (Relatives)":               (mercury, moon, False),
-        "Mrityu (Death)":                   (h8, moon, True),
-        "Paradesa (Foreign Travel)":        (h9, mercury, True),
-        "Artha (Wealth/Money)":             (h2, saturn, True),
-        "Paradara (Adultery/Scandal)":      (venus, sun, False),
-        "Bandhana (Imprisonment)":          (saturn, mars, False),
-        "Vivaha (Marriage)":                (venus, saturn, False),
-        "Santapa (Grief/Sorrow)":           (saturn, moon, False),
-        "Sanchita (Accumulation)":          (jupiter, sun, False),
-        "Jalapatha (Water Travel)":         (moon, saturn, False),
-        "Yuddha (War/Conflict)":            (mars, sun, False),
-        "Shatru (Enemies)":                 (mars, saturn, False),
-        "Vitta (Financial Prosperity)":     (jupiter, sun, False),
-        "Vijaya (Victory)":                 (saturn, mars, False),
-        "Bhagya (Fortune/Luck)":            (sun, jupiter, False),
-        "Karya Siddhi (Success in Tasks)":  (mars, sun, False),
-        "Vyapara (Business/Trade)":         (mercury, saturn, False),
-        "Moha (Delusion/Attachment)":       (venus, moon, False),
-        "Durga (Protection/Safety)":        (mars, sun, False),
-        "Arogya (Health/Wellbeing)":        (moon, mars, False),
-        "Tapas (Spiritual Practice)":       (jupiter, sun, False),
-        "Preeti (Love/Affection)":          (venus, jupiter, False),
-        "Sukha (Happiness/Comforts)":       (moon, mercury, False),
-        "Duhkha (Misery/Pain)":             (saturn, mars, False),
-        "Bhaya (Fear/Danger)":              (mars, saturn, False),
-        "Shoka (Lamentation)":              (saturn, sun, False),
-        "Labha (Gains)":                    (jupiter, mercury, False),
-        "Vyaya (Expenditure)":              (saturn, jupiter, False),
-        "Asuya (Jealousy)":                 (mars, venus, False),
-        "Mada (Intoxication/Arrogance)":    (venus, mars, False),
-        "Chinta (Anxiety/Worry)":           (mercury, saturn, False),
-        "Siddhi (Accomplishment)":          (jupiter, mars, False)
-    }
-
-    computed_sahams = {}
-    
-    for name, (subtrahend, minuend, fixed) in sahams_registry.items():
-        if fixed:
-            p1, p2 = subtrahend, minuend
-        else:
-            p1, p2 = (subtrahend, minuend) if is_day else (minuend, subtrahend)
-
-        base_deg = p1 - p2 + asc
-
-        if p1 < asc < p2 or p2 < asc < p1:
-            base_deg += 0
-        else:
-            base_deg += 30.0
-
-            
-        computed_sahams[name] = {
-            "deg": base_deg,
-            "p1": p1,
-            "p2": p2
-        }
-
-    return computed_sahams
-
-
-def display_all_sahams_report(sahams_data, positions):
-    """
-    Formats and prints all 50 Sahams displaying both normal absolute degrees 
-    (0-360°) and Rashi sign/degree format.
-    """
-    asc = positions["Ascendant"]
-    
-    print("\n" + "=" * 135)
-    print(f"{'COMPLETE TAJIKA 50 SAHAMS REPORT (DEGREES & RASHI)':^135}")
-    print("=" * 135)
-    print(f"{'No.':<4} | {'Saham Name':<30} | {'P1 Position':<22} | {'P2 Position':<22} | {'Ascendant':<20} | {'Saham Position':<24}")
-    print("-" * 135)
-    
-    for idx, (name, item) in enumerate(sahams_data.items(), start=1):
-        deg = item["deg"]
-        p1 = item["p1"]
-        p2 = item["p2"]
-        
-        # Helper to format both absolute normal degrees and Rashi representation
-        def format_deg_and_rashi(val):
-            norm_val = val % 360.0
-            rashi_idx = int(norm_val // 30)
-            rem_deg = norm_val % 30
-            return f"{norm_val:6.2f}° ({RASHI_NAMES[rashi_idx]} {rem_deg:4.2f}°)"
-        
-        p1_str = format_deg_and_rashi(p1)
-        p2_str = format_deg_and_rashi(p2)
-        asc_str = format_deg_and_rashi(asc)
-        saham_str = format_deg_and_rashi(deg)
-        
-        print(f"{idx:<4} | {name:<30} | {p1_str:<22} | {p2_str:<22} | {asc_str:<20} | {saham_str:<24}")
-        
-    print("-" * 135)
-
 # -----------------------------------------------------------------------------
 # VISUAL DISPLAY FUNCTIONS
 # -----------------------------------------------------------------------------
@@ -633,25 +503,59 @@ def display_chart_grid(title, positions):
 # -----------------------------------------------------------------------------
 
 def main():
+    parser = argparse.ArgumentParser(description="Calculate a Tajika annual horoscope.")
+    parser.add_argument("--name", help="Name to include in the report")
+    parser.add_argument("--year", type=int, help="Birth year")
+    parser.add_argument("--month", type=int, help="Birth month (1-12)")
+    parser.add_argument("--day", type=int, help="Birth day (1-31)")
+    parser.add_argument("--hour", type=int, help="Birth hour in local time (0-23)")
+    parser.add_argument("--minute", type=int, help="Birth minute (0-59)")
+    parser.add_argument("--timezone", type=float, help="Timezone offset from UTC in hours")
+    parser.add_argument("--latitude", type=float, help="Birthplace latitude in decimal degrees")
+    parser.add_argument("--longitude", type=float, help="Birthplace longitude in decimal degrees")
+    parser.add_argument("--target-year", type=int, help="Target year for the annual horoscope")
+    args = parser.parse_args()
+
     print("=" * 80)
     print("      TAJIKA VARSHAPHALA & PANCHA VARGEEYA BALA ENGINE")
     print("=" * 80)
-    
-    # 1. Interactive Inputs
-    print("\n--- ENTER NATAL BIRTH DETAILS ---")
-    year = int(input("Birth Year (e.g. 1995): "))
-    month = int(input("Birth Month (1-12): "))
-    day = int(input("Birth Day (1-31): "))
-    hour = int(input("Birth Hour (0-23): "))
-    minute = int(input("Birth Minute (0-59): "))
-    tz_offset = float(input("Timezone Offset from UTC in hours (e.g. 5.5 for IST, -5 for EST): "))
 
-    print("\n--- ENTER BIRTH PLACE GEOGRAPHY ---")
-    lat = float(input("Latitude in decimal degrees (e.g. 28.6139 for North, -23.5 for South): "))
-    lon = float(input("Longitude in decimal degrees (e.g. 77.2090 for East, -74.0 for West): "))
+    if len(sys.argv) > 1:
+        required_args = [
+            "year", "month", "day", "hour", "minute", "timezone",
+            "latitude", "longitude", "target_year"
+        ]
+        missing_args = [name for name in required_args if getattr(args, name) is None]
+        if missing_args:
+            parser.error("when using command-line options, these are required: " + ", ".join(
+                "--" + name.replace("_", "-") for name in missing_args
+            ))
+        name = args.name
+        year, month, day = args.year, args.month, args.day
+        hour, minute = args.hour, args.minute
+        tz_offset = args.timezone
+        lat, lon = args.latitude, args.longitude
+        target_year = args.target_year
+    else:
+        name = None
+        # 1. Interactive Inputs
+        print("\n--- ENTER NATAL BIRTH DETAILS ---")
+        year = int(input("Birth Year (e.g. 1995): "))
+        month = int(input("Birth Month (1-12): "))
+        day = int(input("Birth Day (1-31): "))
+        hour = int(input("Birth Hour (0-23): "))
+        minute = int(input("Birth Minute (0-59): "))
+        tz_offset = float(input("Timezone Offset from UTC in hours (e.g. 5.5 for IST, -5 for EST): "))
 
-    print("\n--- VARSHAPHALA TARGET YEAR ---")
-    target_year = int(input("Target Year for Annual Horoscope (e.g. 2026): "))
+        print("\n--- ENTER BIRTH PLACE GEOGRAPHY ---")
+        lat = float(input("Latitude in decimal degrees (e.g. 28.6139 for North, -23.5 for South): "))
+        lon = float(input("Longitude in decimal degrees (e.g. 77.2090 for East, -74.0 for West): "))
+
+        print("\n--- VARSHAPHALA TARGET YEAR ---")
+        target_year = int(input("Target Year for Annual Horoscope (e.g. 2026): "))
+
+    if name:
+        print(f"\nName: {name}")
 
     # 2. Convert Natal Local Time to UTC
     natal_local_dt = datetime.datetime(year, month, day, hour, minute)
@@ -740,10 +644,6 @@ def main():
     # Determine Day/Night status
     local_vp_dt = vp_dt_utc + datetime.timedelta(hours=tz_offset)
     is_day = 6 <= local_vp_dt.hour < 18
-
-    # Generate and print all 50 Sahams
-    all_sahams = calculate_all_50_sahams(varsha_positions, is_day)
-    display_all_sahams_report(all_sahams, varsha_positions)
 
 if __name__ == "__main__":
     main()
